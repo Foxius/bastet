@@ -208,7 +208,6 @@ async def process_delete_callback(callback_query: types.CallbackQuery, state: FS
 
 @router.message(Command("accept"), AdminFilter(), F.chat.type.in_({ChatType.GROUP, ChatType.SUPERGROUP}))
 async def accept_task(message: types.Message):
-    print(message.model_dump)
     if not message.reply_to_message:
         await message.reply("Эта команда должна быть вызвана в ответ на сообщение пользователя.")
         return

@@ -18,6 +18,6 @@ async def daily_task(bot: Bot):
 
     # await asyncio.sleep(wait_seconds)
     while True:
-        for chat_id in CHATS:
-            await bot.send_photo(chat_id=chat_id, photo="https://i.imgur.com/qWg3vWs.png", caption="По команде /task можно получить задание. Чтобы задание дублировалось тебе в лс - напиши боту @bastet_task_bot команду /start")
-            await asyncio.sleep(6 * 60 * 60)  # 
+        # for chat_id in CHATS:
+        await bot.send_photo(chat_id="-1001755071405", photo="https://i.imgur.com/qWg3vWs.png", caption="По команде /task можно получить задание. Чтобы задание дублировалось тебе в лс - напиши боту @bastet_task_bot команду /start")
+        await asyncio.sleep(6 * 60 * 60)  # 
