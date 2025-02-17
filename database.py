@@ -56,7 +56,7 @@ def get_random_task(conn):
 
 def add_task_to_user(conn, user_id, task_id):
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO user_tasks (user_id, task_id) VALUES (?, ?)", (user_id, task_id))
+    cursor.execute("INSERT OR IGNORE INTO user_tasks (user_id, task_id) VALUES (?, ?)", (user_id, task_id))
     conn.commit()
 
 def update_user_stats(conn, user_id, increment):
@@ -105,3 +105,12 @@ def get_user_stats(conn, user_id):
     cursor.execute("SELECT completed_tasks FROM user_stats WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
     return result[0] if result else 0
+
+def get_top_users(conn, limit=10):
+    """
+    Возвращает топ пользователей по количеству выполненных заданий.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id, completed_tasks FROM user_stats ORDER BY completed_tasks DESC LIMIT ?", (limit,))
+    top_users = cursor.fetchall()
+    return top_users
