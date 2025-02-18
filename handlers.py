@@ -114,7 +114,11 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         try:
             await bot.send_message(user_id, f"Ваше задание {tsk}\nОтчет отправлять @Miss_Bastet5")
             for chat_id in ADMIN_IDS:
-                await bot.send_message(chat_id, f"Пользователь @{username} взял задание {tsk}")
+                try:
+                    await bot.send_message(str(chat_id), f"Пользователь @{username} взял задание {tsk}")
+                except Exception as e:
+                    print(e)
+                    continue
         except:
             await bot.send_message(chat_id=callback_query.message.chat.id, text=f"Ваше задание {tsk}\nОтчет отправлять @Miss_Bastet5. Чтобы в будущем задания дублировались - нажмите кнопку 'старт' боту @bastet_task_bot")
         await callback_query.answer("Задание принято! Теперь вы можете его выполнять.")
