@@ -27,28 +27,24 @@ from database import (
 from loader import bot
 from config import CHATS, ADMIN_IDS
 
-# Создаем роутер
 router = Router()
 
 import logging
 
 logging.basicConfig(level=logging.INFO)
 
-# Состояния для FSM
 class TaskState(StatesGroup):
     waiting_for_task = State()
     waiting_for_new_task = State()
     waiting_for_task_to_delete = State()
     viewing_tasks = State()
 
-# Кастомный фильтр для проверки прав администратора
 class AdminFilter:
     def __call__(self, message: types.Message) -> bool:
         is_admin = message.from_user.id in ADMIN_IDS
         logging.info(f"User {message.from_user.id} is admin: {is_admin}")
         return is_admin
 
-# Команда /start
 @router.message(Command("start"), F.chat.type.in_({ChatType.GROUP, ChatType.SUPERGROUP}))
 async def start(message: types.Message):
     user_id = message.from_user.id
@@ -58,7 +54,6 @@ async def start(message: types.Message):
     
     await message.reply("Привет! Я бот для выдачи заданий. Используй /task, чтобы получить задание.")
 
-# Команда /task
 @router.message(Command("task"), F.chat.type.in_({ChatType.GROUP, ChatType.SUPERGROUP}))
 async def get_task(message: types.Message, state: FSMContext):
     if message.chat.id not in CHATS:
@@ -68,13 +63,11 @@ async def get_task(message: types.Message, state: FSMContext):
     conn = create_connection()
     add_user_to_stats(conn, user_id)
 
-    # Проверяем, есть ли у пользователя активное задание
     if get_active_task(conn, user_id):
         await message.reply("У вас уже есть активное задание.")
         conn.close()
         return
     
-    # Получаем случайное задание
     task = get_random_task(conn)
     
     if not task:
@@ -84,18 +77,15 @@ async def get_task(message: types.Message, state: FSMContext):
     
     task_id, task_text = task
     
-    # Создаем кнопки
     accept_button = InlineKeyboardButton(text="Принять", callback_data=f"accept:{user_id}:{task_id}")
     decline_button = InlineKeyboardButton(text="Отказаться", callback_data=f"decline:{user_id}:{task_id}")
     
-    # Создаем клавиатуру с кнопками
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[accept_button, decline_button]])
     
     await message.reply(f"Ваше задание: {task_text}\nОтчет отправлять @Miss_Bastet5", reply_markup=keyboard)
     await state.set_state(TaskState.waiting_for_task)
     conn.close()
     
-# Обработчик для кнопок "Принять" и "Отказаться"
 @router.callback_query(lambda c: c.data.startswith(('accept:', 'decline:')))
 async def process_callback(callback_query: types.CallbackQuery, state: FSMContext):
     action, user_id, task_id = callback_query.data.split(":")
@@ -106,7 +96,6 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
     conn = create_connection()
     
     if action == "accept":
-        # Добавляем задание в таблицу user_task как активное
         add_task_to_user(conn, user_id, task_id)
         tsk = get_task_by_id(conn, task_id)
         user = await bot.get_chat(user_id)
@@ -124,24 +113,19 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         await callback_query.answer("Задание принято! Теперь вы можете его выполнять.")
         await callback_query.message.edit_text("Задание принято! Теперь вы можете его выполнять.")
     elif action == "decline":
-        # Убираем задание (если нужно)
         delete_task_from_user(conn, user_id)
         await callback_query.answer("Задание отклонено.")
     
-    # Редактируем сообщение с заданием
         await callback_query.message.edit_text("Задание отклонено.")
     
-    # Очищаем состояние
     await state.clear()
     conn.close()
 
-# Команда /addtask (только для администраторов в ЛС)
 @router.message(Command("addtask"), AdminFilter(), F.chat.type == ChatType.PRIVATE)
 async def add_task_command(message: types.Message, state: FSMContext):
     await message.reply("Пожалуйста, введите текст нового задания.")
     await state.set_state(TaskState.waiting_for_new_task)
 
-# Обработка нового задания
 @router.message(TaskState.waiting_for_new_task, F.text, F.chat.type == ChatType.PRIVATE)
 async def process_new_task(message: types.Message, state: FSMContext):
     logging.info(f"User {message.from_user.id} submitted a new task: {message.text}")
@@ -157,13 +141,11 @@ async def process_new_task(message: types.Message, state: FSMContext):
         conn.close()
         await state.clear()
         
-# Команда /deletetask (только для администраторов в ЛС)
 @router.message(Command("deletetask"), AdminFilter(), F.chat.type == ChatType.PRIVATE)
 async def delete_task_command(message: types.Message, state: FSMContext):
     await show_tasks_for_deletion(message.from_user.id, 0)
     await state.set_state(TaskState.waiting_for_task_to_delete)
 
-# Функция для отображения задач с кнопками для удаления
 async def show_tasks_for_deletion(user_id: int, page: int):
     conn = create_connection()
     tasks = get_all_tasks(conn)
@@ -173,30 +155,25 @@ async def show_tasks_for_deletion(user_id: int, page: int):
     start_index = page * tasks_per_page
     end_index = start_index + tasks_per_page
 
-    # Создаем список кнопок для текущей страницы
     buttons = []
     for task in tasks[start_index:end_index]:
         task_id, task_text = task
         buttons.append([InlineKeyboardButton(text=task_text[:10], callback_data=f"delete_task:{task_id}")])
 
-    # Создаем кнопки навигации
     nav_buttons = []
     if page > 0:
         nav_buttons.append(InlineKeyboardButton(text="Назад", callback_data=f"delete_page:{page - 1}"))
     if page < total_pages - 1:
         nav_buttons.append(InlineKeyboardButton(text="Вперед", callback_data=f"delete_page:{page + 1}"))
 
-    # Добавляем кнопки навигации в список кнопок
     if nav_buttons:
         buttons.append(nav_buttons)
 
-    # Создаем клавиатуру с кнопками
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await bot.send_message(user_id, "Выберите задание для удаления:", reply_markup=keyboard)
     conn.close()
 
-# Обработка нажатий кнопок для удаления заданий
 @router.callback_query(lambda c: c.data.startswith(('delete_task:', 'delete_page:')))
 async def process_delete_callback(callback_query: types.CallbackQuery, state: FSMContext):
     action, data = callback_query.data.split(":")
@@ -230,17 +207,14 @@ async def accept_task(message: types.Message):
     user_id = message.reply_to_message.from_user.id
     conn = create_connection()
     
-    # Получаем активное задание пользователя
     active_task = get_active_task(conn, user_id)
     if not active_task:
         await message.reply("У пользователя нет активного задания.")
         conn.close()
         return
     
-    # Обновляем статистику пользователя (+1 к выполненным заданиям)
     update_user_stats(conn, user_id, 1)
     
-    # Удаляем задание из активных
     delete_task_from_user(conn, user_id)
     
     await message.reply(f"Задание зачтено. Пользователь {message.reply_to_message.from_user.first_name} получил +1 к выполненным заданиям.")
@@ -249,18 +223,15 @@ async def accept_task(message: types.Message):
     conn.close()
     
     
-# Команда /stats
 @router.message(Command("stats"), F.chat.type.in_({ChatType.GROUP, ChatType.SUPERGROUP}))
 async def stats_command(message: types.Message):
     
     user_id = message.from_user.id
     conn = create_connection()
     
-    # Личная статистика
     completed_tasks = get_user_stats(conn, user_id)
     personal_stats = f"Ваша статистика: {completed_tasks} выполненных заданий.\n\n"
     
-    # Общая статистика (топ-10)
     top_users = get_top_users(conn)
     if top_users:
         top_stats = "Топ-10 пользователей:\n"
@@ -289,7 +260,6 @@ async def decline_task(message: types.Message):
     user_id = message.reply_to_message.from_user.id
     conn = create_connection()
     
-    # Получаем активное задание пользователя
     active_task = get_active_task(conn, user_id)
     if not active_task:
         await message.reply("У пользователя нет активного задания.")
@@ -297,7 +267,6 @@ async def decline_task(message: types.Message):
         return
     
     update_user_stats(conn, user_id, -1)
-    # Убираем активное задание
     delete_task_from_user(conn, user_id)
     
     await message.reply(f"Задание не зачтено. Пользователь {message.reply_to_message.from_user.first_name} получает -1 балл.")
@@ -307,12 +276,10 @@ async def decline_task(message: types.Message):
 
 @router.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> MEMBER))
 async def on_user_joined(event: types.ChatMemberUpdated):
-    # Проверяем, что это действительно новый пользователь
     if event.new_chat_member.status == "member":
         user_name = event.new_chat_member.user.first_name
         chat_id = event.chat.id
         
-        # Отправляем приветственное сообщение
         message = await event.answer("""ПРАВИЛА :
 
 1️⃣. Напиши боту в ЛС, нажми там "старт" 
@@ -321,6 +288,5 @@ async def on_user_joined(event: types.ChatMemberUpdated):
 
 ‼️ На выполнение дается 24 часа, в заданиях есть ФИНДОМ""")
         
-        # Удаляем сообщение через 5 минут (300 секунд)
         await asyncio.sleep(300)
         await bot.delete_message(chat_id, message.message_id)
