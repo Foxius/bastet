@@ -109,8 +109,12 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         # Добавляем задание в таблицу user_task как активное
         add_task_to_user(conn, user_id, task_id)
         tsk = get_task_by_id(conn, task_id)
+        user = await bot.get_chat(user_id)
+        username = user.username if user.username else user.first_name
         try:
             await bot.send_message(user_id, f"Ваше задание {tsk}\nОтчет отправлять @Miss_Bastet5")
+            for chat_id in ADMIN_IDS:
+                await bot.send_message(chat_id, f"Пользователь @{username} взял задание {tsk}")
         except:
             await bot.send_message(chat_id=callback_query.message.chat.id, text=f"Ваше задание {tsk}\nОтчет отправлять @Miss_Bastet5. Чтобы в будущем задания дублировались - нажмите кнопку 'старт' боту @bastet_task_bot")
         await callback_query.answer("Задание принято! Теперь вы можете его выполнять.")

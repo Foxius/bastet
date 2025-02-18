@@ -106,6 +106,12 @@ def get_user_stats(conn, user_id):
     result = cursor.fetchone()
     return result[0] if result else 0
 
+def get_user_by_id(conn, user_id):
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM user_stats WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    return result[0] if result else 0
+
 def get_top_users(conn, limit=10):
     """
     Возвращает топ пользователей по количеству выполненных заданий.
