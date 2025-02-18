@@ -1,4 +1,4 @@
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
 import logging

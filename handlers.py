@@ -1,9 +1,13 @@
+import asyncio
 from aiogram import Router, types, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.enums import ChatType
+from aiogram import types
+from aiogram.filters import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER
+
 
 from database import (
     create_connection,
@@ -291,3 +295,23 @@ async def decline_task(message: types.Message):
     await bot.send_message(user_id, "Ваше задание не зачтено.")
     
     conn.close()
+
+@router.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> MEMBER))
+async def on_user_joined(event: types.ChatMemberUpdated):
+    # Проверяем, что это действительно новый пользователь
+    if event.new_chat_member.status == "member":
+        user_name = event.new_chat_member.user.first_name
+        chat_id = event.chat.id
+        
+        # Отправляем приветственное сообщение
+        message = await event.answer("""ПРАВИЛА :
+
+1️⃣. Напиши боту в ЛС, нажми там "старт" 
+2️⃣. Нажми на задание, напечатав в строке чата "/"
+3️⃣. Нажми "Принять" задание, внимательно прочитав его. Отчет присылать Мисс Бастет 
+
+‼️ На выполнение дается 24 часа, в заданиях есть ФИНДОМ""")
+        
+        # Удаляем сообщение через 5 минут (300 секунд)
+        await asyncio.sleep(300)
+        await bot.delete_message(chat_id, message.message_id)
