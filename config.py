@@ -1,4 +1,8 @@
-BOT_TOKEN = "7447867310:AAEpQsbldZgaOoVTx_8wYm5mQD6AXM-KG_Y"
-CHATS = [-1002395020841, -1001755071405]
-DATABASE_NAME = 'tasks.db'
-ADMIN_IDS = [5709409611, 1594231051, 7188565864]
+import os
+import dotenv
+dotenv.load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHATS = os.getenv("CHATS")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+ADMIN_IDS = os.getenv("ADMIN_IDS")
