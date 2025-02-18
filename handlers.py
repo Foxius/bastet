@@ -114,13 +114,14 @@ async def process_callback(callback_query: types.CallbackQuery, state: FSMContex
         except:
             await bot.send_message(chat_id=callback_query.message.chat.id, text=f"Ваше задание {tsk}\nОтчет отправлять @Miss_Bastet5. Чтобы в будущем задания дублировались - нажмите кнопку 'старт' боту @bastet_task_bot")
         await callback_query.answer("Задание принято! Теперь вы можете его выполнять.")
+        await callback_query.message.edit_text("Задание принято! Теперь вы можете его выполнять.")
     elif action == "decline":
         # Убираем задание (если нужно)
         delete_task_from_user(conn, user_id)
         await callback_query.answer("Задание отклонено.")
     
     # Редактируем сообщение с заданием
-    await callback_query.message.edit_text("Вы приняли задание. Удачи!")
+        await callback_query.message.edit_text("Задание отклонено.")
     
     # Очищаем состояние
     await state.clear()
